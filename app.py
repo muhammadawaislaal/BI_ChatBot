@@ -3,81 +3,74 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
 from fpdf import FPDF
+from datetime import datetime
 
-# LangChain + Groq
+# LangChain imports
 from langchain_experimental.agents import create_pandas_dataframe_agent
-from langchain_groq import ChatGroq
+from langchain_groq import ChatGroq  # You can swap with any LLM provider
 
 # --- PAGE CONFIG ---
 st.set_page_config(
-    page_title="AI Business Intelligence Assistant",
-    page_icon="📊",
+    page_title="📊 AI Data Analyst",
+    page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # --- SIDEBAR ---
-st.sidebar.title("📊 AI BI Assistant")
-st.sidebar.markdown("Small, polished demo running on **Groq** (free tier)")
+st.sidebar.title("📊 AI Data Analyst")
+st.sidebar.markdown("Upload your data → Ask questions → Get instant insights.")
 
-# API Key check
-if "GROQ_API_KEY" not in st.secrets:
-    st.sidebar.error("❌ No Groq API key found in `secrets.toml`")
-    st.stop()
-else:
-    st.sidebar.success("✅ Groq API key loaded")
-
-# Model selector
-model = st.sidebar.selectbox(
-    "Select Model",
-    ["gemma2-9b-it", "llama3-70b-8192", "mixtral-8x7b-32768"]
-)
-
-st.sidebar.markdown("### 📌 Instructions")
-st.sidebar.markdown("""
-1. **Upload CSV** file.  
-2. Ask questions in plain English.  
-3. View answers + charts instantly.  
-4. Export results if needed.
-""")
-
-# --- MAIN TITLE ---
-st.title("📈 AI Business Intelligence Assistant")
-st.caption("Upload a CSV → Ask in natural language → Get answers & charts instantly.")
+# Tracker for interactions
+if "history" not in st.session_state:
+    st.session_state.history = []
 
 # --- FILE UPLOAD ---
-uploaded_file = st.file_uploader(
-    "📤 Upload CSV file",
-    type=["csv"],
-    help="Upload your data file (max 200MB)."
-)
+uploaded_file = st.sidebar.file_uploader("📤 Upload CSV", type=["csv"])
 
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
+
     st.subheader("📄 Data Preview")
     st.dataframe(df.head())
 
-    # --- AGENT ---
+    # --- AI Model Setup ---
     llm = ChatGroq(
-        groq_api_key=st.secrets["GROQ_API_KEY"],
-        model=model,
+        api_key=st.secrets["API_KEY"],  # Replace with your secret
+        model="llama3-70b-8192",
         temperature=0
     )
-    agent = create_pandas_dataframe_agent(llm, df, verbose=False)
 
-    # --- QUERY INPUT ---
-    st.markdown("### 💬 Ask a question about your data")
-    query = st.text_input("Example: 'Show total sales by Region'")
+    # FIX: Allow dangerous code explicitly
+    agent = create_pandas_dataframe_agent(
+        llm,
+        df,
+        verbose=False,
+        allow_dangerous_code=True
+    )
+
+    # --- QUERY SECTION ---
+    st.markdown("### 💬 Ask a question")
+    query = st.text_input("Example: Show total sales by region")
 
     if query:
-        with st.spinner("🤖 Thinking..."):
+        with st.spinner("Analyzing your data..."):
             try:
                 response = agent.invoke(query)
-                st.markdown(f"**Answer:** {response['output']}")
+                answer = response.get("output", "No output returned.")
+                st.markdown(f"**Answer:** {answer}")
+
+                # Save to tracker
+                st.session_state.history.append({
+                    "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "query": query,
+                    "answer": answer
+                })
+
             except Exception as e:
                 st.error(f"Error: {e}")
 
-        # --- OPTIONAL: Auto plot if request contains keywords ---
+        # Auto chart if request contains keywords
         if any(word in query.lower() for word in ["plot", "chart", "graph", "show", "visualize"]):
             try:
                 fig, ax = plt.subplots()
@@ -86,27 +79,33 @@ if uploaded_file:
             except Exception:
                 st.warning("No valid columns to plot automatically.")
 
-    # --- EXPORT OPTIONS ---
-    def export_pdf(text):
+    # --- TRACKER SECTION ---
+    if st.session_state.history:
+        st.markdown("### 📜 Interaction History")
+        for item in st.session_state.history:
+            st.write(f"🕒 {item['time']}")
+            st.write(f"**Q:** {item['query']}")
+            st.write(f"**A:** {item['answer']}")
+            st.markdown("---")
+
+    # --- EXPORT AS PDF ---
+    def export_pdf(history):
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", size=12)
-        pdf.multi_cell(0, 10, text)
+        for item in history:
+            pdf.multi_cell(0, 10, f"[{item['time']}]\nQ: {item['query']}\nA: {item['answer']}\n")
+            pdf.ln()
         return pdf.output(dest="S").encode("latin1")
 
-    st.markdown("### 📤 Export")
-    if query and 'output' in locals():
-        pdf_data = export_pdf(response['output'])
+    if st.session_state.history:
+        pdf_data = export_pdf(st.session_state.history)
         st.download_button(
-            "Download Answer as PDF",
+            "📥 Download Report as PDF",
             data=pdf_data,
-            file_name="ai_bi_report.pdf",
+            file_name="data_analysis_report.pdf",
             mime="application/pdf"
         )
 
 else:
-    st.info("👆 Please upload a CSV file to begin.")
-
-# --- FOOTER ---
-st.markdown("---")
-st.caption("🚀 Built for portfolio demos — Powered by Streamlit, LangChain, and Groq.")
+    st.info("👆 Please upload a CSV file to start.")
