@@ -1,86 +1,94 @@
-import os
+import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import streamlit as st
-from datetime import datetime
 from fpdf import FPDF
-
-# ✅ FIXED LangChain imports
+from datetime import datetime
 from langchain_experimental.agents.agent_toolkits.pandas.base import create_pandas_dataframe_agent
 from langchain_groq import ChatGroq
 
 # =========================
-#  STREAMLIT PAGE CONFIG
+#  CONFIGURATION & THEME
 # =========================
 st.set_page_config(
-    page_title="📊 AI-Powered BI Assistant",
+    page_title="📊 BI Conversational AI",
+    page_icon="💬",
     layout="wide",
-    initial_sidebar_state="expanded"
 )
 
 # =========================
-#  SIDEBAR HEADER & TRACKER
+#  API KEY SETUP
 # =========================
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
-if "query_count" not in st.session_state:
-    st.session_state.query_count = 0
-if "start_time" not in st.session_state:
-    st.session_state.start_time = datetime.now()
+API_KEY = (
+    st.secrets.get("GROQ_API_KEY")
+    or st.secrets.get("API_KEY")
+    or st.secrets.get("api_key")
+)
 
-st.sidebar.title("📊 BI AI Assistant")
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 📌 How to Use")
-st.sidebar.markdown("""
-1. **Upload your CSV file** containing sales, profit, or KPIs.  
-2. **Ask questions in plain English** — e.g., *"Show me sales by region"*  
-3. **View instant answers** with tables or charts.  
-4. **Export results to PDF** if needed.  
-""")
-st.sidebar.markdown("---")
-
-# Tracker
-elapsed_time = datetime.now() - st.session_state.start_time
-st.sidebar.metric("⏱ Time Active", str(elapsed_time).split(".")[0])
-st.sidebar.metric("💬 Total Queries", st.session_state.query_count)
-
-st.sidebar.markdown("---")
-st.sidebar.info("💡 This assistant specializes in **Business Intelligence** but can also answer general questions.")
-
-# =========================
-#  API KEY CHECK
-# =========================
-if "API_KEY" not in st.secrets:
-    st.error("❌ API Key not found. Please add it in Streamlit secrets as `API_KEY`.")
+if not API_KEY:
+    st.error("❌ API Key not found. Please add `GROQ_API_KEY` in your Streamlit secrets.")
     st.stop()
 
-api_key = st.secrets["API_KEY"]
+# =========================
+#  HEADER
+# =========================
+st.markdown(
+    """
+    <h1 style="text-align:center; color:#4B9CD3;">
+        💬 Business Intelligence AI Assistant
+    </h1>
+    <p style="text-align:center; font-size:16px;">
+        Ask anything about your data — get instant answers, insights, and visuals.
+    </p>
+    <hr>
+    """,
+    unsafe_allow_html=True,
+)
 
 # =========================
-#  MAIN HEADER
+#  SIDEBAR - INFO & TRACKER
 # =========================
-st.markdown("<h1 style='text-align: center;'>📊 AI-Powered Business Intelligence Assistant</h1>", unsafe_allow_html=True)
-st.write("Ask anything about your data — from **sales trends** to **profit forecasts** — or have a general chat.")
+st.sidebar.header("📌 Instructions")
+st.sidebar.markdown(
+    """
+    1. **Upload** your CSV file.  
+    2. **Ask questions** in plain English.  
+    3. Get **instant BI insights** + charts.  
+    4. **Export** results as PDF.  
+    """
+)
+
+st.sidebar.header("📈 Usage Tracker")
+if "queries_count" not in st.session_state:
+    st.session_state.queries_count = 0
+st.sidebar.metric("Questions Asked", st.session_state.queries_count)
+
+st.sidebar.header("💡 BI Tips")
+st.sidebar.info(
+    """
+    - Ask about **trends** over time.  
+    - Compare **categories**.  
+    - Request **charts** or **summaries**.  
+    - Example:  
+      *"Show me monthly sales trends for 2024"*  
+    """
+)
 
 # =========================
 #  FILE UPLOAD
 # =========================
-uploaded_file = st.file_uploader("📂 Upload a CSV file for BI analysis", type=["csv"])
-
-df = None
-agent = None
+uploaded_file = st.file_uploader("📂 Upload your CSV file", type=["csv"])
 
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
-    st.success("✅ Data uploaded successfully!")
+    st.success("✅ File uploaded successfully!")
     st.dataframe(df.head())
 
     # =========================
-    #  LLM + AGENT SETUP
+    #  LLM SETUP
     # =========================
     llm = ChatGroq(
-        groq_api_key=api_key,
-        model="llama3-8b-8192",
+        groq_api_key=API_KEY,
+        model="llama3-8b-8192",  # Stable conversational model
         temperature=0
     )
 
@@ -88,54 +96,73 @@ if uploaded_file:
         llm,
         df,
         verbose=False,
-        allow_dangerous_code=True  # ✅ Required to avoid ValueError
+        allow_dangerous_code=True  # Required for Streamlit Cloud
     )
 
-# =========================
-#  CONVERSATIONAL INPUT
-# =========================
-query = st.text_input("💬 Ask a question about your data or chat:")
+    # =========================
+    #  USER INPUT
+    # =========================
+    user_query = st.text_input("💬 Ask a BI question or any data-related query:")
 
-if query:
-    st.session_state.query_count += 1
-    st.session_state.chat_history.append(("You", query))
+    if user_query:
+        st.session_state.queries_count += 1
 
-    if agent and df is not None:
-        try:
-            # If BI-related question
-            bi_keywords = ["sales", "profit", "growth", "revenue", "region", "trend", "forecast", "kpi"]
-            if any(kw in query.lower() for kw in bi_keywords):
-                response = agent.run(query)
-                st.session_state.chat_history.append(("AI (BI Mode)", response))
+        with st.spinner("🤔 Thinking..."):
+            try:
+                response = agent.run(user_query)
+                st.markdown(f"### 🧠 Answer:\n{response}")
 
-                st.success(response)
+                # Optional: Auto-generate chart for BI questions
+                if any(word in user_query.lower() for word in ["trend", "chart", "plot", "graph"]):
+                    st.markdown("#### 📊 Auto-generated Chart")
+                    plt.figure(figsize=(8, 4))
+                    try:
+                        # Simple guess: plot first numeric column over index
+                        num_cols = df.select_dtypes(include='number').columns
+                        if len(num_cols) >= 1:
+                            df[num_cols[0]].plot()
+                            plt.title(f"{num_cols[0]} Trend")
+                            plt.xlabel("Index")
+                            plt.ylabel(num_cols[0])
+                            st.pyplot(plt)
+                    except Exception as e:
+                        st.warning(f"Could not auto-generate chart: {e}")
 
-                # Optional: Auto chart if keyword detected
-                if "sales" in query.lower() and "region" in df.columns:
-                    fig, ax = plt.subplots()
-                    df.groupby("region")["sales"].sum().plot(kind="bar", ax=ax)
-                    ax.set_title("Sales by Region")
-                    st.pyplot(fig)
+            except Exception as e:
+                st.error(f"Error: {e}")
 
-            else:
-                # General chat mode
-                st.session_state.chat_history.append(("AI (General)", f"I understand your question: {query}. However, I specialize in BI. Could you provide data or context?"))
-                st.info("ℹ️ This assistant is optimized for BI queries. Please upload data for full insights.")
+    # =========================
+    #  EXPORT TO PDF
+    # =========================
+    def export_pdf(text):
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", size=12)
+        for line in text.split("\n"):
+            pdf.cell(200, 10, txt=line, ln=True)
+        file_name = f"BI_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        pdf.output(file_name)
+        return file_name
 
-        except Exception as e:
-            st.error(f"⚠️ Error: {str(e)}")
-    else:
-        st.info("📌 Please upload a CSV file for BI insights.")
+    if st.button("📄 Export Last Answer to PDF"):
+        if user_query:
+            pdf_path = export_pdf(f"Question: {user_query}\n\nAnswer:\n{response}")
+            st.success(f"✅ Exported to {pdf_path}")
+        else:
+            st.warning("Please ask a question first.")
 
-# =========================
-#  CHAT HISTORY
-# =========================
-st.markdown("## 🗨️ Conversation History")
-for speaker, message in st.session_state.chat_history:
-    st.markdown(f"**{speaker}:** {message}")
+else:
+    st.info("⬆️ Please upload a CSV file to start.")
 
 # =========================
 #  FOOTER
 # =========================
-st.markdown("---")
-st.markdown("<div style='text-align: center; color: gray;'>© 2025 BI AI Assistant | Designed for smarter business insights</div>", unsafe_allow_html=True)
+st.markdown(
+    """
+    <hr>
+    <p style="text-align:center; color:gray; font-size:13px;">
+        © 2025 BI Conversational AI | Built for Business Insights & Data Storytelling
+    </p>
+    """,
+    unsafe_allow_html=True,
+)
