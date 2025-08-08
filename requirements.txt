@@ -5,3 +5,4 @@ langchain-experimental
 langchain-community
 langchain-groq
 matplotlib
+requests
