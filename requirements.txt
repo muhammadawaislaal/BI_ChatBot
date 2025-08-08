@@ -1,8 +1,8 @@
-streamlit
+streamlit==1.48.0
 pandas
 matplotlib
-langchain
-langchain-community
-langchain-openai
-langchain-experimental
+langchain-community==0.3.27
+langchain-openai==0.3.28
+langchain-experimental==0.3.4
 openai
+python-dotenv
