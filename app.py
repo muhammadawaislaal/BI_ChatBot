@@ -3,8 +3,10 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
-from langchain.chat_models import ChatOpenAI
-from langchain.agents import create_pandas_dataframe_agent
+
+# Updated imports for new LangChain versions
+from langchain_openai import ChatOpenAI
+from langchain_experimental.agents import create_pandas_dataframe_agent
 
 # --- Streamlit UI ---
 st.set_page_config(page_title="BI Chatbot", layout="wide")
@@ -19,7 +21,7 @@ if uploaded_file:
     st.dataframe(df.head())
 
     # Initialize LangChain Pandas Agent
-    llm = ChatOpenAI(temperature=0, model_name="gpt-4o")
+    llm = ChatOpenAI(temperature=0, model="gpt-4o")  # Model name updated
     agent = create_pandas_dataframe_agent(llm, df, verbose=True)
 
     # Ask a question
