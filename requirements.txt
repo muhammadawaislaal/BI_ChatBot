@@ -1,8 +1,7 @@
-streamlit==1.48.0
+streamlit
 pandas
+langchain
+langchain-experimental
+langchain-community
+langchain-groq
 matplotlib
-tabulate
-langchain-community==0.3.27
-langchain-groq==0.3.7
-langchain-experimental==0.3.4
-python-dotenv
