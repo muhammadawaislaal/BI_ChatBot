@@ -6,7 +6,10 @@ from io import BytesIO
 from langchain_groq import ChatGroq
 from langchain_experimental.agents import create_pandas_dataframe_agent
 
-# Load Groq API key from Streamlit secrets
+# Load Groq API key securely
+if "GROQ_API_KEY" not in st.secrets:
+    st.error("Missing GROQ_API_KEY in secrets!")
+    st.stop()
 os.environ["GROQ_API_KEY"] = st.secrets["GROQ_API_KEY"]
 
 st.set_page_config(page_title="BI Chatbot (Groq)", layout="wide")
@@ -18,9 +21,8 @@ if uploaded_file:
     st.subheader("Data Preview")
     st.dataframe(df.head())
 
-    # Initialize Groq LLM
     llm = ChatGroq(
-        model_name="mixtral-8x7b-32768",
+        model_name="llama-3.3-70b-versatile",  # Updated model
         temperature=0,
     )
 
@@ -28,7 +30,7 @@ if uploaded_file:
         llm,
         df,
         verbose=True,
-        allow_dangerous_code=True,
+        allow_dangerous_code=True
     )
 
     query = st.text_input("Ask me about your data:")
