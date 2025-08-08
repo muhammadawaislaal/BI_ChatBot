@@ -1,60 +1,49 @@
-import os
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
 from langchain_openai import ChatOpenAI
 from langchain_experimental.agents import create_pandas_dataframe_agent
+import os
 
-# ===== Load API key from Streamlit secrets =====
-os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+# --- Streamlit UI ---
+st.set_page_config(page_title="📊 AI-Powered BI Assistant", layout="wide")
+st.title("📊 AI-Powered BI Assistant")
+st.write("Upload a CSV file and ask questions about your data!")
 
-# ===== Streamlit page config =====
-st.set_page_config(page_title="BI Chatbot", layout="wide")
-st.title("📊 AI-Powered Business Intelligence Chatbot")
+# --- File Upload ---
+uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
 
-# ===== Session state for chat history =====
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
-
-# ===== File uploader =====
-uploaded_file = st.file_uploader("Upload your CSV data", type=["csv"])
-
-if uploaded_file:
-    # Load CSV into DataFrame
+if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
-    st.success("Data uploaded successfully!")
+    st.subheader("Data Preview")
     st.dataframe(df.head())
 
-    # Create LangChain Pandas Agent
-    llm = ChatOpenAI(temperature=0, model="gpt-4o")
-    agent = create_pandas_dataframe_agent(llm, df, verbose=True)
+    # Initialize LLM (OpenAI GPT)
+    llm = ChatOpenAI(
+        temperature=0,
+        model="gpt-4o",  # You can change to gpt-4-turbo or gpt-3.5-turbo
+        api_key=os.environ.get("OPENAI_API_KEY")  # Pulls from Streamlit secrets
+    )
+
+    # Create LangChain Pandas Agent with dangerous code enabled
+    agent = create_pandas_dataframe_agent(
+        llm,
+        df,
+        verbose=True,
+        allow_dangerous_code=True
+    )
 
     # User query input
     query = st.text_input("Ask me about your data:")
 
     if query:
-        with st.spinner("Analyzing..."):
-            answer = agent.run(query)
+        with st.spinner("Thinking..."):
+            try:
+                response = agent.run(query)
+                st.success(response)
+            except Exception as e:
+                st.error(f"Error: {e}")
 
-        # Save to history
-        st.session_state.chat_history.append({"user": query, "bot": answer})
-
-        # Display chat history
-        for chat in st.session_state.chat_history:
-            st.markdown(f"**You:** {chat['user']}")
-            st.markdown(f"**Bot:** {chat['bot']}")
-
-        # Auto-generate chart if possible
-        try:
-            fig, ax = plt.subplots()
-            numeric_cols = df.select_dtypes(include="number").columns
-            if len(numeric_cols) >= 2:
-                df.plot(x=numeric_cols[0], y=numeric_cols[1], kind='line', ax=ax)
-                buf = BytesIO()
-                fig.savefig(buf, format="png")
-                st.image(buf)
-        except Exception as e:
-            st.warning(f"No chart generated: {e}")
 else:
     st.info("Please upload a CSV file to get started.")
