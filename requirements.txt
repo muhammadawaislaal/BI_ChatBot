@@ -1,9 +1,7 @@
 streamlit
-langchain
-langchain-experimental
 pandas
 matplotlib
-groq
-tabulate
-rich
+langchain
+langchain-groq
+langchain-experimental
 fpdf
