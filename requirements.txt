@@ -1,8 +1,10 @@
-streamlit
+streamlit>=1.18.0
 pandas
-langchain
-langchain-experimental
-langchain-community
-langchain-groq
 matplotlib
 requests
+fpdf
+langchain
+langchain-community
+langchain-experimental
+langchain-groq
+langchain-ollama-or-community # optional: ensure whichever package you need for local ollama integration
