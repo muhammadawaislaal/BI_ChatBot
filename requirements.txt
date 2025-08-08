@@ -2,6 +2,7 @@ streamlit
 pandas
 matplotlib
 langchain
+langchain-community
 langchain-openai
 langchain-experimental
 openai
