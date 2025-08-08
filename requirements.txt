@@ -1,7 +1,6 @@
-streamlit
+streamlit>=1.10
 pandas
 matplotlib
-langchain
-langchain-groq
-langchain-experimental
 fpdf
+tabulate
+
