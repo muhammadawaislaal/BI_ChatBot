@@ -5,9 +5,10 @@ import streamlit as st
 from datetime import datetime
 from fpdf import FPDF
 
-# LangChain imports
-from langchain_experimental.agents import create_pandas_dataframe_agent
+# ✅ FIXED LangChain imports
+from langchain_experimental.agents.agent_toolkits.pandas.base import create_pandas_dataframe_agent
 from langchain_groq import ChatGroq
+
 
 # =========================
 # PAGE CONFIG & HEADER
@@ -147,3 +148,4 @@ st.markdown(
     "<p style='text-align:center; color:gray;'>© 2025 BI Pro AI — Turning data into decisions</p>",
     unsafe_allow_html=True
 )
+
