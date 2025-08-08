@@ -6,3 +6,4 @@ matplotlib
 groq
 tabulate
 rich
+fpdf
