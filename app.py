@@ -1,42 +1,37 @@
+import os
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
-from langchain_openai import ChatOpenAI
+from langchain_groq import ChatGroq
 from langchain_experimental.agents import create_pandas_dataframe_agent
-import os
 
-# --- Streamlit UI ---
-st.set_page_config(page_title="📊 AI-Powered BI Assistant", layout="wide")
-st.title("📊 AI-Powered BI Assistant")
-st.write("Upload a CSV file and ask questions about your data!")
+# Load Groq API key from Streamlit secrets
+os.environ["GROQ_API_KEY"] = st.secrets["GROQ_API_KEY"]
 
-# --- File Upload ---
-uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
+st.set_page_config(page_title="BI Chatbot (Groq)", layout="wide")
+st.title("📊 AI-Powered BI Assistant (via Groq)")
 
-if uploaded_file is not None:
+uploaded_file = st.file_uploader("Upload your CSV data", type=["csv"])
+if uploaded_file:
     df = pd.read_csv(uploaded_file)
     st.subheader("Data Preview")
     st.dataframe(df.head())
 
-    # Initialize LLM (OpenAI GPT)
-    llm = ChatOpenAI(
+    # Initialize Groq LLM
+    llm = ChatGroq(
+        model_name="mixtral-8x7b-32768",
         temperature=0,
-        model="gpt-4o",  # You can change to gpt-4-turbo or gpt-3.5-turbo
-        api_key=os.environ.get("OPENAI_API_KEY")  # Pulls from Streamlit secrets
     )
 
-    # Create LangChain Pandas Agent with dangerous code enabled
     agent = create_pandas_dataframe_agent(
         llm,
         df,
         verbose=True,
-        allow_dangerous_code=True
+        allow_dangerous_code=True,
     )
 
-    # User query input
     query = st.text_input("Ask me about your data:")
-
     if query:
         with st.spinner("Thinking..."):
             try:
@@ -44,6 +39,5 @@ if uploaded_file is not None:
                 st.success(response)
             except Exception as e:
                 st.error(f"Error: {e}")
-
 else:
     st.info("Please upload a CSV file to get started.")
