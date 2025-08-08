@@ -9,143 +9,133 @@ from fpdf import FPDF
 from langchain_experimental.agents.agent_toolkits.pandas.base import create_pandas_dataframe_agent
 from langchain_groq import ChatGroq
 
-
 # =========================
-# PAGE CONFIG & HEADER
+#  STREAMLIT PAGE CONFIG
 # =========================
 st.set_page_config(
-    page_title="BI Pro AI Assistant",
-    page_icon="📊",
-    layout="wide"
+    page_title="📊 AI-Powered BI Assistant",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-st.markdown("""
-    <style>
-        .main {background-color: #f8f9fa;}
-        header {visibility: hidden;}
-        footer {visibility: hidden;}
-    </style>
-""", unsafe_allow_html=True)
-
 # =========================
-# HEADER & FOOTER
+#  SIDEBAR HEADER & TRACKER
 # =========================
-st.markdown("<h1 style='text-align:center; color:#2c3e50;'>📊 BI Pro AI Assistant</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:gray;'>Your conversational BI partner — Data meets insights</p>", unsafe_allow_html=True)
-
-# =========================
-# SIDEBAR
-# =========================
-st.sidebar.header("📌 Instructions")
-st.sidebar.markdown("""
-1. **Upload** your CSV file.  
-2. **Ask anything** — casual or BI-focused.  
-3. For BI: Use natural language (e.g., *Show monthly sales trends*).  
-4. AI will respond conversationally and provide charts/tables.  
-5. Export insights as PDF anytime.
-""")
-
-st.sidebar.header("📈 Tracker")
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 if "query_count" not in st.session_state:
     st.session_state.query_count = 0
-st.sidebar.metric("Queries Made", st.session_state.query_count)
+if "start_time" not in st.session_state:
+    st.session_state.start_time = datetime.now()
+
+st.sidebar.title("📊 BI AI Assistant")
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 📌 How to Use")
+st.sidebar.markdown("""
+1. **Upload your CSV file** containing sales, profit, or KPIs.  
+2. **Ask questions in plain English** — e.g., *"Show me sales by region"*  
+3. **View instant answers** with tables or charts.  
+4. **Export results to PDF** if needed.  
+""")
+st.sidebar.markdown("---")
+
+# Tracker
+elapsed_time = datetime.now() - st.session_state.start_time
+st.sidebar.metric("⏱ Time Active", str(elapsed_time).split(".")[0])
+st.sidebar.metric("💬 Total Queries", st.session_state.query_count)
+
+st.sidebar.markdown("---")
+st.sidebar.info("💡 This assistant specializes in **Business Intelligence** but can also answer general questions.")
 
 # =========================
-# API KEY
+#  API KEY CHECK
 # =========================
-API_KEY = st.secrets.get("API_KEY", None)
-if not API_KEY:
-    st.error("❌ API key missing! Add it to `secrets.toml` as `API_KEY = 'your_key_here'`")
+if "API_KEY" not in st.secrets:
+    st.error("❌ API Key not found. Please add it in Streamlit secrets as `API_KEY`.")
     st.stop()
 
+api_key = st.secrets["API_KEY"]
+
 # =========================
-# FILE UPLOAD
+#  MAIN HEADER
 # =========================
-uploaded_file = st.file_uploader("📂 Upload CSV Data", type=["csv"])
+st.markdown("<h1 style='text-align: center;'>📊 AI-Powered Business Intelligence Assistant</h1>", unsafe_allow_html=True)
+st.write("Ask anything about your data — from **sales trends** to **profit forecasts** — or have a general chat.")
+
+# =========================
+#  FILE UPLOAD
+# =========================
+uploaded_file = st.file_uploader("📂 Upload a CSV file for BI analysis", type=["csv"])
+
 df = None
-if uploaded_file:
-    try:
-        df = pd.read_csv(uploaded_file)
-        st.success(f"✅ Data Loaded: {df.shape[0]} rows × {df.shape[1]} columns")
-        st.dataframe(df.head())
-    except Exception as e:
-        st.error(f"Error loading file: {e}")
-        st.stop()
-
-# =========================
-# AI MODEL
-# =========================
-llm = ChatGroq(
-    groq_api_key=API_KEY,
-    model="llama-3.1-70b-versatile",
-    temperature=0
-)
-
 agent = None
-if df is not None:
+
+if uploaded_file:
+    df = pd.read_csv(uploaded_file)
+    st.success("✅ Data uploaded successfully!")
+    st.dataframe(df.head())
+
+    # =========================
+    #  LLM + AGENT SETUP
+    # =========================
+    llm = ChatGroq(
+        groq_api_key=api_key,
+        model="llama3-8b-8192",
+        temperature=0
+    )
+
     agent = create_pandas_dataframe_agent(
         llm,
         df,
         verbose=False,
-        allow_dangerous_code=True
+        allow_dangerous_code=True  # ✅ Required to avoid ValueError
     )
 
 # =========================
-# CHAT INPUT
+#  CONVERSATIONAL INPUT
 # =========================
-st.markdown("### 💬 Ask me anything (BI questions get special attention)")
-user_query = st.text_input("Type your question...")
+query = st.text_input("💬 Ask a question about your data or chat:")
 
-if user_query:
+if query:
     st.session_state.query_count += 1
-    try:
-        if agent and df is not None:
-            # Run as BI query
-            with st.spinner("🔍 Analyzing..."):
-                response = agent.run(user_query)
-            st.write(response)
-        else:
-            # Run as general conversation
-            with st.spinner("💡 Thinking..."):
-                from langchain.prompts import ChatPromptTemplate
-                prompt = ChatPromptTemplate.from_template(
-                    "You are a friendly and knowledgeable AI assistant. "
-                    "Answer the following question in a conversational and clear way:\n\n{q}"
-                )
-                final_prompt = prompt.format(q=user_query)
-                response = llm.invoke(final_prompt)
-            st.write(response.content)
+    st.session_state.chat_history.append(("You", query))
 
-    except Exception as e:
-        st.error(f"⚠️ Error: {e}")
+    if agent and df is not None:
+        try:
+            # If BI-related question
+            bi_keywords = ["sales", "profit", "growth", "revenue", "region", "trend", "forecast", "kpi"]
+            if any(kw in query.lower() for kw in bi_keywords):
+                response = agent.run(query)
+                st.session_state.chat_history.append(("AI (BI Mode)", response))
 
-# =========================
-# EXPORT TO PDF
-# =========================
-def export_pdf(text):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    for line in text.split("\n"):
-        pdf.cell(200, 10, txt=line, ln=True)
-    pdf_path = f"BI_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-    pdf.output(pdf_path)
-    return pdf_path
+                st.success(response)
 
-if st.button("📄 Export Last Response as PDF"):
-    if "response" in locals():
-        file_path = export_pdf(str(response))
-        with open(file_path, "rb") as f:
-            st.download_button("⬇️ Download PDF", f, file_path)
+                # Optional: Auto chart if keyword detected
+                if "sales" in query.lower() and "region" in df.columns:
+                    fig, ax = plt.subplots()
+                    df.groupby("region")["sales"].sum().plot(kind="bar", ax=ax)
+                    ax.set_title("Sales by Region")
+                    st.pyplot(fig)
+
+            else:
+                # General chat mode
+                st.session_state.chat_history.append(("AI (General)", f"I understand your question: {query}. However, I specialize in BI. Could you provide data or context?"))
+                st.info("ℹ️ This assistant is optimized for BI queries. Please upload data for full insights.")
+
+        except Exception as e:
+            st.error(f"⚠️ Error: {str(e)}")
     else:
-        st.warning("No response to export yet!")
+        st.info("📌 Please upload a CSV file for BI insights.")
 
 # =========================
-# FOOTER
+#  CHAT HISTORY
+# =========================
+st.markdown("## 🗨️ Conversation History")
+for speaker, message in st.session_state.chat_history:
+    st.markdown(f"**{speaker}:** {message}")
+
+# =========================
+#  FOOTER
 # =========================
 st.markdown("---")
-st.markdown(
-    "<p style='text-align:center; color:gray;'>© 2025 BI Pro AI — Turning data into decisions</p>",
-    unsafe_allow_html=True
-)
-
+st.markdown("<div style='text-align: center; color: gray;'>© 2025 BI AI Assistant | Designed for smarter business insights</div>", unsafe_allow_html=True)
