@@ -1,3 +1,13 @@
+import subprocess
+import sys
+
+# Ensure "tabulate" is installed for pandas.to_markdown()
+try:
+    import tabulate
+except ImportError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "tabulate"])
+    import tabulate
+
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -88,7 +98,7 @@ if uploaded_file:
     # =========================
     llm = ChatGroq(
         groq_api_key=API_KEY,
-        model="llama3-8b-8192",  # Stable conversational model
+        model="llama3-8b-8192",
         temperature=0
     )
 
@@ -96,7 +106,7 @@ if uploaded_file:
         llm,
         df,
         verbose=False,
-        allow_dangerous_code=True  # Required for Streamlit Cloud
+        allow_dangerous_code=True
     )
 
     # =========================
@@ -112,12 +122,10 @@ if uploaded_file:
                 response = agent.run(user_query)
                 st.markdown(f"### 🧠 Answer:\n{response}")
 
-                # Optional: Auto-generate chart for BI questions
                 if any(word in user_query.lower() for word in ["trend", "chart", "plot", "graph"]):
                     st.markdown("#### 📊 Auto-generated Chart")
                     plt.figure(figsize=(8, 4))
                     try:
-                        # Simple guess: plot first numeric column over index
                         num_cols = df.select_dtypes(include='number').columns
                         if len(num_cols) >= 1:
                             df[num_cols[0]].plot()
