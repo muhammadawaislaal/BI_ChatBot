@@ -10,11 +10,16 @@ except ImportError:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "tabulate"])
     import tabulate
 
+try:
+    import seaborn as sns
+except ImportError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "seaborn"])
+    import seaborn as sns
+
 import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 from fpdf import FPDF
 from datetime import datetime
 from langchain_experimental.agents.agent_toolkits.pandas.base import create_pandas_dataframe_agent
@@ -264,15 +269,19 @@ if uploaded_file:
         tab1, tab2, tab3, tab4 = st.tabs(["📋 Data Preview", "🔍 Data Types", "📊 Statistics", "📈 Visual Overview"])
         
         with tab1:
-            st.dataframe(df.head(10), use_container_width=True)
+            st.dataframe(df.head(10), width='stretch')
         
         with tab2:
-            dtype_df = pd.DataFrame(df.dtypes, columns=['Data Type'])
-            st.dataframe(dtype_df, use_container_width=True)
+            # Fix for data type display issue
+            dtype_info = []
+            for col in df.columns:
+                dtype_info.append({"Column": col, "Data Type": str(df[col].dtype)})
+            dtype_df = pd.DataFrame(dtype_info)
+            st.dataframe(dtype_df, width='stretch')
         
         with tab3:
             if numeric_cols > 0:
-                st.dataframe(df.describe(), use_container_width=True)
+                st.dataframe(df.describe(), width='stretch')
             else:
                 st.info("No numeric columns to display statistics")
         
@@ -347,11 +356,13 @@ if uploaded_file:
             
             with st.spinner("🤔 Analyzing your data with AI..."):
                 try:
-                    response = agent.run(user_query)
+                    # Use invoke instead of run to avoid deprecation warning
+                    response = agent.invoke(user_query)
+                    response_text = response['output'] if isinstance(response, dict) and 'output' in response else str(response)
                     
                     # Display response in a nice format
                     st.markdown("### 📊 AI Analysis Result")
-                    st.markdown(f"<div style='background-color: #f0f8ff; padding: 1.5rem; border-radius: 10px; border-left: 4px solid #3498db;'>{response}</div>", 
+                    st.markdown(f"<div style='background-color: #f0f8ff; padding: 1.5rem; border-radius: 10px; border-left: 4px solid #3498db;'>{response_text}</div>", 
                                unsafe_allow_html=True)
                     
                     # Auto-generate visualizations for relevant queries
@@ -437,12 +448,12 @@ if uploaded_file:
             return file_name
 
         if st.button("📄 Export to PDF Report", use_container_width=True):
-            if user_query and 'response' in locals():
+            if user_query and 'response_text' in locals():
                 df_info = {
                     'rows': df.shape[0],
                     'cols': df.shape[1]
                 }
-                pdf_path = export_pdf(response, df_info, user_query)
+                pdf_path = export_pdf(response_text, df_info, user_query)
                 
                 with open(pdf_path, "rb") as file:
                     st.download_button(
