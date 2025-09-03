@@ -1,10 +1,11 @@
 streamlit
 pandas
+numpy
 matplotlib
+seaborn
+plotly
 fpdf
 langchain
 langchain-experimental
 langchain-groq
-tabulate
-chardet 
-
+chardet
