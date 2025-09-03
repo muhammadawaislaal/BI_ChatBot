@@ -2,7 +2,6 @@ streamlit
 pandas
 numpy
 matplotlib
-seaborn
 plotly
 fpdf
 langchain
