@@ -19,7 +19,6 @@ from datetime import datetime
 from langchain_experimental.agents.agent_toolkits.pandas.base import create_pandas_dataframe_agent
 from langchain_groq import ChatGroq
 import plotly.express as px
-import plotly.graph_objects as go
 
 # =========================
 #  CONFIGURATION & THEME
@@ -140,7 +139,7 @@ with st.sidebar:
     st.markdown("""
     <div style='background: linear-gradient(135deg, #00b09b 0%, #96c93d 100%); padding: 1rem; border-radius: 10px; color: white;'>
         <h2 style='color: white;'>🤖 Model Details</h2>
-        <p><strong>AI Model:</strong> LLaMA 3 8B</p>
+        <p><strong>AI Model:</strong> LLaMA 3.1 8B</p>
         <p><strong>Provider:</strong> Groq</p>
         <p><strong>Capabilities:</strong></p>
         <ul>
@@ -303,7 +302,7 @@ if uploaded_file:
         # =========================
         llm = ChatGroq(
             groq_api_key=API_KEY,
-            model="llama3-8b-8192",
+            model="llama-3.1-8b-instant",  # Updated to current model
             temperature=0
         )
 
@@ -482,7 +481,7 @@ st.markdown(
     """
     <div style='text-align: center; color: gray; font-size: 13px;'>
         <p>© 2025 BI Conversational AI | Built for Professional Business Insights & Data Storytelling</p>
-        <p>Powered by Groq LLaMA 3 • Streamlit • LangChain</p>
+        <p>Powered by Groq LLaMA 3.1 • Streamlit • LangChain</p>
     </div>
     """,
     unsafe_allow_html=True,
