@@ -10,12 +10,6 @@ except ImportError:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "tabulate"])
     import tabulate
 
-try:
-    import seaborn as sns
-except ImportError:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "seaborn"])
-    import seaborn as sns
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -26,7 +20,6 @@ from langchain_experimental.agents.agent_toolkits.pandas.base import create_pand
 from langchain_groq import ChatGroq
 import plotly.express as px
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 
 # =========================
 #  CONFIGURATION & THEME
@@ -272,7 +265,7 @@ if uploaded_file:
             st.dataframe(df.head(10), width='stretch')
         
         with tab2:
-            # Fix for data type display issue
+            # Fix for data type display issue - convert to string
             dtype_info = []
             for col in df.columns:
                 dtype_info.append({"Column": col, "Data Type": str(df[col].dtype)})
