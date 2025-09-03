@@ -96,6 +96,15 @@ st.markdown("""
         border-radius: 5px;
         border-left: 4px solid #17a2b8;
     }
+    .response-box {
+        background-color: #f0f8ff;
+        padding: 1.5rem;
+        border-radius: 10px;
+        border-left: 4px solid #3498db;
+        color: #2c3e50;
+        font-size: 16px;
+        line-height: 1.6;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -167,7 +176,7 @@ with st.sidebar:
         <p><strong>Example Queries:</strong></p>
         <ul>
             <li>"Show sales trends by month"</li>
-            <li>"Compare performance across regions"</li>
+            <<li>"Compare performance across regions"</li>
             <li>"What are the top 5 products by revenue?"</li>
             <li>"Generate a correlation matrix"</li>
         </ul>
@@ -302,7 +311,7 @@ if uploaded_file:
         # =========================
         llm = ChatGroq(
             groq_api_key=API_KEY,
-            model="llama-3.1-8b-instant",  # Updated to current model
+            model="llama-3.1-8b-instant",
             temperature=0
         )
 
@@ -354,8 +363,7 @@ if uploaded_file:
                     
                     # Display response in a nice format
                     st.markdown("### 📊 AI Analysis Result")
-                    st.markdown(f"<div style='background-color: #f0f8ff; padding: 1.5rem; border-radius: 10px; border-left: 4px solid #3498db;'>{response_text}</div>", 
-                               unsafe_allow_html=True)
+                    st.markdown(f"<div class='response-box'>{response_text}</div>", unsafe_allow_html=True)
                     
                     # Auto-generate visualizations for relevant queries
                     chart_keywords = ["trend", "chart", "plot", "graph", "visualize", "show me", "compare", "distribution"]
