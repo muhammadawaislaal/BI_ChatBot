@@ -1,15 +1,4 @@
-# Compatibility check
-try:
-    from langchain_experimental.agents import create_pandas_dataframe_agent
-    print("Using new import path")
-except ImportError:
-    try:
-        from langchain_experimental.agents.agent_toolkits.pandas.base import create_pandas_dataframe_agent
-        print("Using old import path")
-    except ImportError as e:
-        st.error(f"Import error: {e}")
-        st.stop()
-        
+
 import subprocess
 import sys
 import chardet
