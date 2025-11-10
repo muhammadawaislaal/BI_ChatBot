@@ -16,7 +16,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from fpdf import FPDF
 from datetime import datetime
-from langchain_experimental.agents.agent_toolkits.pandas.base import create_pandas_dataframe_agent
+from langchain_experimental.agents import create_pandas_dataframe_agent
 from langchain_groq import ChatGroq
 import plotly.express as px
 
@@ -494,3 +494,4 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
